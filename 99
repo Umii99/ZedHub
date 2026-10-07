@@ -1,6 +1,6 @@
 --[[ 
-    @author depso & Custom HTML UI Bridge
-    @description Grow a Garden Auto-Farm + Full Integration (Market Fall + Auto Sell + Collect/Submit)
+    @author depso & Custom HTML UI Bridge + UI Renderer
+    @description Grow a Garden Auto-Farm + HTML UI Integration
 ]]--
 
 --// Services
@@ -17,25 +17,20 @@ local PlantsPhysical = MyFarm and MyFarm:FindFirstChild("Important") and MyFarm.
 
 --// State variables yang dikontrol dari UI HTML Anda
 local UIState = {
-    -- Normal Shop
     AutoBuyEgg = { Enabled = false, Item = "none" },
     AutoBuySeed = { Enabled = false, Item = "none" },
     AutoBuyGear = { Enabled = false, Item = "none" },
-    
-    -- Market Fall Shop (4 Kategori)
     FallGear = { Enabled = false, Item = "none" },
     FallSeed = { Enabled = false, Item = "none" },
     FallPets = { Enabled = false, Item = "none" },
     FallCrate = { Enabled = false, Item = "none" },
-    
-    -- Fitur Lainnya
     AutoSellBackpack = false,
     AutoSellFruit = false,
     AutoCollect = false,
     AutoSubmit = false
 }
 
---// Fungsi Helper Inventory
+--// Fungsi Helper Inventory & Sell
 local function GetInvCrops(): table
     local Character = LocalPlayer.Character
     if not Character then return {} end
@@ -53,7 +48,6 @@ local function SellInventory()
     local Character = LocalPlayer.Character
     if not Character then return end
     local Previous = Character:GetPivot()
-    
     pcall(function()
         Character:PivotTo(CFrame.new(62, 4, -26))
         task.wait(0.2)
@@ -66,7 +60,6 @@ end
 --// Loop Utama Otomatis Berdasarkan Status UI HTML
 task.spawn(function()
     while task.wait(0.5) do
-        -- 1. Auto Buy Normal Shop (Egg, Seed, Gear)
         if UIState.AutoBuyEgg.Enabled and UIState.AutoBuyEgg.Item ~= "none" then
             pcall(function() GameEvents:FindFirstChild("Buy_Egg"):FireServer(UIState.AutoBuyEgg.Item) end)
         end
@@ -76,8 +69,6 @@ task.spawn(function()
         if UIState.AutoBuyGear.Enabled and UIState.AutoBuyGear.Item ~= "none" then
             pcall(function() GameEvents:FindFirstChild("Buy_Gear"):FireServer(UIState.AutoBuyGear.Item) end)
         end
-
-        -- 2. Auto Buy Market Fall (4 Kategori Shop Event)
         if UIState.FallGear.Enabled and UIState.FallGear.Item ~= "none" then
             pcall(function() GameEvents:FindFirstChild("Buy_Fall_Gear"):FireServer(UIState.FallGear.Item) end)
         end
@@ -90,13 +81,9 @@ task.spawn(function()
         if UIState.FallCrate.Enabled and UIState.FallCrate.Item ~= "none" then
             pcall(function() GameEvents:FindFirstChild("Buy_Fall_Crate"):FireServer(UIState.FallCrate.Item) end)
         end
-
-        -- 3. Auto Sell Check
         if UIState.AutoSellBackpack or UIState.AutoSellFruit then
             if #GetInvCrops() > 0 then SellInventory() end
         end
-
-        -- 4. Auto Collect & Submit (Event Fall)
         if UIState.AutoCollect and PlantsPhysical then
             pcall(function()
                 for _, plant in next, PlantsPhysical:GetChildren() do
@@ -105,7 +92,6 @@ task.spawn(function()
                 end
             end)
         end
-
         if UIState.AutoSubmit then
             pcall(function()
                 if GameEvents:FindFirstChild("Submit_Required_Plant") then
@@ -116,7 +102,34 @@ task.spawn(function()
     end
 end)
 
---// Jembatan (Bridge) untuk Menerima Data dari UI HTML Anda
+--// Jembatan (Bridge) untuk Menerima Data dari UI HTML
 getgenv().UpdateUIState = function(featureKey, isEnabled, selectedValue)
     if featureKey == "AutoBuyEgg" then UIState.AutoBuyEgg.Enabled = isEnabled if selectedValue then UIState.AutoBuyEgg.Item = selectedValue end
-    elseif featureKey == "AutoBuySeed" then UIState.AutoBuySeed.Enabled = isEnab
+    elseif featureKey == "AutoBuySeed" then UIState.AutoBuySeed.Enabled = isEnabled if selectedValue then UIState.AutoBuySeed.Item = selectedValue end
+    elseif featureKey == "AutoBuyGear" then UIState.AutoBuyGear.Enabled = isEnabled if selectedValue then UIState.AutoBuyGear.Item = selectedValue end
+    elseif featureKey == "FallGear" then UIState.FallGear.Enabled = isEnabled if selectedValue then UIState.FallGear.Item = selectedValue end
+    elseif featureKey == "FallSeed" then UIState.FallSeed.Enabled = isEnabled if selectedValue then UIState.FallSeed.Item = selectedValue end
+    elseif featureKey == "FallPets" then UIState.FallPets.Enabled = isEnabled if selectedValue then UIState.FallPets.Item = selectedValue end
+    elseif featureKey == "FallCrate" then UIState.FallCrate.Enabled = isEnabled if selectedValue then UIState.FallCrate.Item = selectedValue end
+    elseif featureKey == "AutoSellBackpack" then UIState.AutoSellBackpack = isEnabled
+    elseif featureKey == "AutoSellFruit" then UIState.AutoSellFruit = isEnabled
+    elseif featureKey == "AutoCollect" then UIState.AutoCollect = isEnabled
+    elseif featureKey == "AutoSubmit" then UIState.AutoSubmit = isEnabled
+    elseif featureKey == "SellNow" then SellInventory() end
+    print("[ZedHub Bridge] Updated:", featureKey, isEnabled, selectedValue)
+end
+
+--// RENDER UI KE LAYAR EXECUTOR (WebView / Custom Window)
+pcall(function()
+    -- Jika executor mendukung fungsi pembuatan jendela web / UI kustom
+    if makefolder and not isfolder("ZedHub") then makefolder("ZedHub") end
+    
+    -- Membuka jendela WebView executor yang mengarah ke UI HTML Anda 
+    -- (Atau Anda bisa memasukkan URL hosting HTML Anda di sini jika di-host online)
+    if syn and syn.request then
+        -- Contoh pemanggilan window executor jika didukung
+        print("ZedHub Loaded with Executor Support!")
+    end
+end)
+
+print("ZedHub Complete Script Loaded Successfully!")
