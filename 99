@@ -1,6 +1,6 @@
 --[[ 
-    @author depso & Custom HTML UI Bridge + UI Renderer
-    @description Grow a Garden Auto-Farm + HTML UI Integration
+    @author depso & Custom HTML UI Bridge
+    @description Grow a Garden Auto-Farm + HTML WebView Loader for Delta Mobile
 ]]--
 
 --// Services
@@ -112,24 +112,29 @@ getgenv().UpdateUIState = function(featureKey, isEnabled, selectedValue)
     elseif featureKey == "FallPets" then UIState.FallPets.Enabled = isEnabled if selectedValue then UIState.FallPets.Item = selectedValue end
     elseif featureKey == "FallCrate" then UIState.FallCrate.Enabled = isEnabled if selectedValue then UIState.FallCrate.Item = selectedValue end
     elseif featureKey == "AutoSellBackpack" then UIState.AutoSellBackpack = isEnabled
-    elseif featureKey == "AutoSellFruit" then UIState.AutoSellFruit = isEnabled
+    elseif featureKey == "AutoSellFruit" then UIState.AutoSellFruit.Enabled = isEnabled
     elseif featureKey == "AutoCollect" then UIState.AutoCollect = isEnabled
     elseif featureKey == "AutoSubmit" then UIState.AutoSubmit = isEnabled
     elseif featureKey == "SellNow" then SellInventory() end
-    print("[ZedHub Bridge] Updated:", featureKey, isEnabled, selectedValue)
 end
 
---// RENDER UI KE LAYAR EXECUTOR (WebView / Custom Window)
+--// MEMUNCULKAN UI HTML DI LAYAR HP (MENGGUNAKAN WEBVIEW EXECUTOR)
 pcall(function()
-    -- Jika executor mendukung fungsi pembuatan jendela web / UI kustom
-    if makefolder and not isfolder("ZedHub") then makefolder("ZedHub") end
+    -- Ganti URL di bawah ini dengan Link Raw dari file ui.html yang Anda buat di GitHub
+    local uiUrl = "https://raw.githubusercontent.com/Umii99/ZedHub/refs/heads/main/ui.html"
     
-    -- Membuka jendela WebView executor yang mengarah ke UI HTML Anda 
-    -- (Atau Anda bisa memasukkan URL hosting HTML Anda di sini jika di-host online)
-    if syn and syn.request then
-        -- Contoh pemanggilan window executor jika didukung
-        print("ZedHub Loaded with Executor Support!")
+    if syn and syn.toast_notification then
+        syn.toast_notification("ZedHub Loaded")
+    end
+    
+    -- Fungsi bawaan executor Delta / mobile untuk membuka halaman web/UI kustom di layar game
+    if identifyexecutor and string.find(string.lower(identifyexecutor()), "delta") then
+        // Delta WebView execution
+        if Webview and Webview.new then
+            local myWindow = Webview.new("ZedHub UI", uiUrl, 450, 500)
+            myWindow:Show()
+        end
     end
 end)
 
-print("ZedHub Complete Script Loaded Successfully!")
+print("ZedHub WebView Script Loaded!")
