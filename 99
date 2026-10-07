@@ -1,0 +1,122 @@
+--[[ 
+    @author depso & Custom HTML UI Bridge
+    @description Grow a Garden Auto-Farm + Full Integration (Market Fall + Auto Sell + Collect/Submit)
+]]--
+
+--// Services
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local Backpack = LocalPlayer.Backpack
+
+--// Folders & Events
+local GameEvents = ReplicatedStorage:WaitForChild("GameEvents")
+local Farms = workspace:WaitForChild("Farm")
+local MyFarm = Farms:WaitForChild(LocalPlayer.Name, 5) or Farms:GetChildren()[1]
+local PlantsPhysical = MyFarm and MyFarm:FindFirstChild("Important") and MyFarm.Important:FindFirstChild("Plants_Physical")
+
+--// State variables yang dikontrol dari UI HTML Anda
+local UIState = {
+    -- Normal Shop
+    AutoBuyEgg = { Enabled = false, Item = "none" },
+    AutoBuySeed = { Enabled = false, Item = "none" },
+    AutoBuyGear = { Enabled = false, Item = "none" },
+    
+    -- Market Fall Shop (4 Kategori)
+    FallGear = { Enabled = false, Item = "none" },
+    FallSeed = { Enabled = false, Item = "none" },
+    FallPets = { Enabled = false, Item = "none" },
+    FallCrate = { Enabled = false, Item = "none" },
+    
+    -- Fitur Lainnya
+    AutoSellBackpack = false,
+    AutoSellFruit = false,
+    AutoCollect = false,
+    AutoSubmit = false
+}
+
+--// Fungsi Helper Inventory
+local function GetInvCrops(): table
+    local Character = LocalPlayer.Character
+    if not Character then return {} end
+    local Crops = {}
+    for _, Tool in next, Backpack:GetChildren() do
+        if Tool:FindFirstChild("Item_String") then table.insert(Crops, Tool) end
+    end
+    for _, Tool in next, Character:GetChildren() do
+        if Tool:FindFirstChild("Item_String") then table.insert(Crops, Tool) end
+    end
+    return Crops
+end
+
+local function SellInventory()
+    local Character = LocalPlayer.Character
+    if not Character then return end
+    local Previous = Character:GetPivot()
+    
+    pcall(function()
+        Character:PivotTo(CFrame.new(62, 4, -26))
+        task.wait(0.2)
+        GameEvents.Sell_Inventory:FireServer()
+        task.wait(0.2)
+        Character:PivotTo(Previous)
+    end)
+end
+
+--// Loop Utama Otomatis Berdasarkan Status UI HTML
+task.spawn(function()
+    while task.wait(0.5) do
+        -- 1. Auto Buy Normal Shop (Egg, Seed, Gear)
+        if UIState.AutoBuyEgg.Enabled and UIState.AutoBuyEgg.Item ~= "none" then
+            pcall(function() GameEvents:FindFirstChild("Buy_Egg"):FireServer(UIState.AutoBuyEgg.Item) end)
+        end
+        if UIState.AutoBuySeed.Enabled and UIState.AutoBuySeed.Item ~= "none" then
+            pcall(function() GameEvents.BuySeedStock:FireServer(UIState.AutoBuySeed.Item) end)
+        end
+        if UIState.AutoBuyGear.Enabled and UIState.AutoBuyGear.Item ~= "none" then
+            pcall(function() GameEvents:FindFirstChild("Buy_Gear"):FireServer(UIState.AutoBuyGear.Item) end)
+        end
+
+        -- 2. Auto Buy Market Fall (4 Kategori Shop Event)
+        if UIState.FallGear.Enabled and UIState.FallGear.Item ~= "none" then
+            pcall(function() GameEvents:FindFirstChild("Buy_Fall_Gear"):FireServer(UIState.FallGear.Item) end)
+        end
+        if UIState.FallSeed.Enabled and UIState.FallSeed.Item ~= "none" then
+            pcall(function() GameEvents:FindFirstChild("Buy_Fall_Seed"):FireServer(UIState.FallSeed.Item) end)
+        end
+        if UIState.FallPets.Enabled and UIState.FallPets.Item ~= "none" then
+            pcall(function() GameEvents:FindFirstChild("Buy_Fall_Pets"):FireServer(UIState.FallPets.Item) end)
+        end
+        if UIState.FallCrate.Enabled and UIState.FallCrate.Item ~= "none" then
+            pcall(function() GameEvents:FindFirstChild("Buy_Fall_Crate"):FireServer(UIState.FallCrate.Item) end)
+        end
+
+        -- 3. Auto Sell Check
+        if UIState.AutoSellBackpack or UIState.AutoSellFruit then
+            if #GetInvCrops() > 0 then SellInventory() end
+        end
+
+        -- 4. Auto Collect & Submit (Event Fall)
+        if UIState.AutoCollect and PlantsPhysical then
+            pcall(function()
+                for _, plant in next, PlantsPhysical:GetChildren() do
+                    local prompt = plant:FindFirstChild("ProximityPrompt", true)
+                    if prompt and prompt.Enabled then fireproximityprompt(prompt) end
+                end
+            end)
+        end
+
+        if UIState.AutoSubmit then
+            pcall(function()
+                if GameEvents:FindFirstChild("Submit_Required_Plant") then
+                    GameEvents.Submit_Required_Plant:FireServer()
+                end
+            end)
+        end
+    end
+end)
+
+--// Jembatan (Bridge) untuk Menerima Data dari UI HTML Anda
+getgenv().UpdateUIState = function(featureKey, isEnabled, selectedValue)
+    if featureKey == "AutoBuyEgg" then UIState.AutoBuyEgg.Enabled = isEnabled if selectedValue then UIState.AutoBuyEgg.Item = selectedValue end
+    elseif featureKey == "AutoBuySeed" then UIState.AutoBuySeed.Enabled = isEnab
